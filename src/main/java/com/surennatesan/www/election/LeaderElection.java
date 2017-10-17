@@ -9,7 +9,7 @@ public class LeaderElection {
     private static final int QUOROM_MAJORITY_COUNT = 2;
     private String leaderNodeId;
     private String nodeId;
-    private Election lastElection;
+    private Election currentElection;
     private long lastHeartbeatTimestamp;
     private long currentTerm = -1;
 
@@ -25,13 +25,13 @@ public class LeaderElection {
             this.lastHeartbeatTimestamp = System.currentTimeMillis();
             this.currentTerm = term;
             if (isElectionOngoing()) {
-                lastElection = null;
+                currentElection = null;
             }
         }
     }
 
     public synchronized Leader getLeader() {
-        if (leaderNodeId != null && (leaderNodeId.equals(nodeId) || !heartbeatTimedout())) {
+        if (leaderNodeId != null &&  !heartbeatTimedOut()) {
             return new Leader(leaderNodeId, currentTerm);
         } else {
             return null;
@@ -40,17 +40,17 @@ public class LeaderElection {
 
     public synchronized boolean needElection() {
         return ((leaderNodeId == null && !isElectionOngoing()) ||
-                (leaderNodeId == null && lastElectionTimedout())) ||
-                (leaderNodeId != null && !leaderNodeId.equals(nodeId) && heartbeatTimedout() && !isElectionOngoing()) ||
-                (leaderNodeId != null && !leaderNodeId.equals(nodeId) && heartbeatTimedout() && lastElectionTimedout());
+                (leaderNodeId == null && currentElectionTimedOut())) ||
+                (leaderNodeId != null && heartbeatTimedOut() && !isElectionOngoing()) ||
+                (leaderNodeId != null && heartbeatTimedOut() && currentElectionTimedOut());
     }
 
     public synchronized boolean requestVote(String nodeId, long term) {
         if (term > currentTerm) {
-            lastElection = new Election(nodeId, System.currentTimeMillis(), term, QUOROM_MAJORITY_COUNT);
+            currentElection = new Election(nodeId, System.currentTimeMillis(), term, QUOROM_MAJORITY_COUNT);
             currentTerm = term;
             if (isElectionOngoing()) {
-                lastElection = null;
+                currentElection = null;
             }
             return true;
         }
@@ -59,42 +59,41 @@ public class LeaderElection {
 
     public synchronized Election startElection() {
         if (needElection()) {
-            lastElection = new Election(nodeId, System.currentTimeMillis(), ++currentTerm, QUOROM_MAJORITY_COUNT);
-            return lastElection;
+            currentElection = new Election(nodeId, System.currentTimeMillis(), ++currentTerm, QUOROM_MAJORITY_COUNT);
+            return currentElection;
         }
         return null;
     }
 
-    public synchronized boolean registerVote(String votedNodeId, long electionTerm, boolean vote, String candidateId) {
+    public synchronized ElectionResult registerVote(String votedNodeId, long electionTerm, boolean vote, String candidateId) {
+        ElectionResult result = ElectionResult.UNKNOWN;
         if (isElectionOngoing() && electionTerm == currentTerm) {
-            ElectionResult result;
             if (vote) {
-                result = lastElection.registerYay(votedNodeId, electionTerm);
+                result = currentElection.registerAye(votedNodeId, electionTerm);
             } else {
-                result = lastElection.registerNah(votedNodeId, electionTerm);
+                result = currentElection.registerNah(votedNodeId, electionTerm);
             }
             if (result.equals(ElectionResult.FAILURE)) {
-                lastElection = null;
-                return false;
+                currentElection = null;
             } else if (result.equals(ElectionResult.SUCCESS)) {
                 leaderNodeId = candidateId;
-                lastElection = null;
-                return true;
+                lastHeartbeatTimestamp = System.currentTimeMillis();
+                currentElection = null;
             }
         }
-        return false;
+        return result;
     }
 
 
     public boolean isElectionOngoing() {
-        return (lastElection != null && lastElection.getElectionTerm() == currentTerm);
+        return (currentElection != null && currentElection.getElectionTerm() == currentTerm);
     }
 
-    private boolean lastElectionTimedout() {
-        return (isElectionOngoing() && System.currentTimeMillis() - lastElection.getStartTime() > ELECTION_TIMEOUT);
+    private boolean currentElectionTimedOut() {
+        return (isElectionOngoing() && System.currentTimeMillis() - currentElection.getStartTime() > ELECTION_TIMEOUT);
     }
 
-    private boolean heartbeatTimedout() {
+    private boolean heartbeatTimedOut() {
         return (System.currentTimeMillis() - lastHeartbeatTimestamp > HEART_BEAT_TIMEOUT);
     }
 

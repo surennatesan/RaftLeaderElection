@@ -8,22 +8,22 @@ public class Election {
     private String startNode;
     private long startTime;
     private long electionTerm;
-    private Set<String> yays = new HashSet<>();
+    private Set<String> ayes = new HashSet<>();
     private Set<String> nahs = new HashSet<>();
-    private int majorityCount;
+    private int majorityRequired;
 
-    public Election(String startNode, long startTime, long electionTerm, int majorityCount) {
+    public Election(String startNode, long startTime, long electionTerm, int majorityRequired) {
         this.startNode = startNode;
         this.startTime = startTime;
         this.electionTerm = electionTerm;
-        this.majorityCount = majorityCount;
-        yays.add(startNode);
+        this.majorityRequired = majorityRequired;
+        ayes.add(startNode); // add the candidate as aye voter
     }
 
-    public ElectionResult registerYay(String nodeId, long term) {
+    public ElectionResult registerAye(String nodeId, long term) {
         if (term == electionTerm) {
-            yays.add(nodeId);
-            if (yays.size() >= majorityCount) {
+            ayes.add(nodeId);
+            if (ayes.size() >= majorityRequired) {
                 return ElectionResult.SUCCESS;
             } else {
                 return ElectionResult.UNKNOWN;
@@ -35,7 +35,7 @@ public class Election {
     public ElectionResult registerNah(String nodeId, long term) {
         if (term == electionTerm) {
             nahs.add(nodeId);
-            if (nahs.size() >= majorityCount) {
+            if (nahs.size() >= majorityRequired) {
                 return ElectionResult.FAILURE;
             } else {
                 return ElectionResult.UNKNOWN;

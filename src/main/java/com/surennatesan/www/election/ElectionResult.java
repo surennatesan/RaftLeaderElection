@@ -1,6 +1,6 @@
 package com.surennatesan.www.election;
 
-enum ElectionResult {
+public enum ElectionResult {
     SUCCESS,
     FAILURE,
     UNKNOWN;

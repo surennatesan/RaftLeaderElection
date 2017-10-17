@@ -27,11 +27,12 @@ public class LeaderElectionRoutineCheck {
 
     public void startRoutine() throws InterruptedException {
         while(true) {
+            logCurrentLeader();
             try {
                 if (leaderElection.amILeader() && System.currentTimeMillis() - lastTimeHeartbeatSend > HEARTBEAT_SENT_TIMEOUT) {
                     Leader leader = leaderElection.getLeader();
                     sender.broadcast(new HeartbeatMessage(leader.getNodeId(), leader.getTerm()));
-                    LOGGER.info(" I am leader. Broadcasted heartbeat ");
+                    LOGGER.info("Broadcasting heartbeat from leader");
                 } else if (leaderElection.needElection()) {
                     LOGGER.info(" Election Needed ");
                     initiateElection();
@@ -45,17 +46,26 @@ public class LeaderElectionRoutineCheck {
 
     public void initiateElection() {
         try {
-            LOGGER.info(" Randon wait time started before starting election " );
-            Thread.sleep(ThreadLocalRandom.current().nextLong(VOTING_START_RANDOM_MILLIS_MIN, VOTING_START_RANDOM_MILLIS_MAX + 1));
-            LOGGER.info(" Trying to start election " );
+            long randomWaitTime = ThreadLocalRandom.current().nextLong(VOTING_START_RANDOM_MILLIS_MIN, VOTING_START_RANDOM_MILLIS_MAX + 1);
+            LOGGER.info("Random wait time started before starting election in millis =>" + randomWaitTime);
+            Thread.sleep(randomWaitTime);
             Election election = leaderElection.startElection();
             if (election != null) {
-                LOGGER.info("broadcasting  vote request" );
+                LOGGER.info("Started election with term " + election.getElectionTerm() + ". Broadcasting  vote request" );
                 sender.broadcast(new VoteRequestMessage(election.getStartNode(), election.getElectionTerm()));
             }
 
         } catch (Exception ex) {
             LOGGER.warning(ex.getMessage());
+        }
+    }
+
+    private void logCurrentLeader() {
+        Leader leader = leaderElection.getLeader();
+        if (leader != null) {
+            LOGGER.info("Leader is " + leader.getNodeId() + " with term " + leader.getTerm());
+        } else {
+            LOGGER.info("No elected Leader");
         }
     }
 }
