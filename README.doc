@@ -1,0 +1,14 @@
+This is the leader election of the Raft algo.
+
+The code is hardcoded for quoram size of 3 with majority of 2. The code is also hardcoded to run listener on ports 5000, 5001. 5002.
+
+Run three instances of LeaderElectionMain with their port as commandline argument.
+
+Here is the maven command to start the three instances
+
+mvn exec:java -Dexec.args="5000"
+mvn exec:java -Dexec.args="5001"
+mvn exec:java -Dexec.args="5002"
+
+
+
